@@ -1,0 +1,146 @@
+-----Vì sao phải Feature Normalize ?-----
+Thuật toán Gradient Descent sẽ chạy nhanh hơn với những vùng dữ liệu nhỏ.
+Ví dụ:
+
+Với việc dự đoán chất lượng gạo từ độ dài hạt, ta chỉ cần xử lí với những số từ 0-3 cm, thuật toán Gradient Descent sẽ chạy khá nhanh.
+Nhưng với dự đoán giá đất, ta phải xử lí diện tích rất rộng, và giá tiền lên đến vài chục nghìn $ hay vài tỷ đồng, hầu hết thuật toán training sẽ overload và nếu có thể xử lí hết thì tốc độ cũng rất chậm.
+Vì thế chúng ta cần phải quy chuẩn các input về một khoảng nhất định để việc training được tối ưu nhất. Các khoảng dữ liệu có thể như sau:
+
+-1 < x <= 1
+
+Hoặc:
+
+-0.5 < x <= 0.5
+
+Không có một quy chuẩn cụ thể x sẽ nằm trong khoảng nào, nhưng để tối ưu nhất, vùng dữ liệu (x lớn nhất – x nhỏ nhất) nên <= 1 và trung bình của toàn bộ x gần bằng 0.
+Để thực hiện 2 yêu cầu này, chúng ta tách Feature Normalize thành 2 phần: Feature Scaling (đưa vùng dữ liệu về -0.5 < x <= 0.5) và Mean Normalization (đưa trung bình của x về gần 0).
+
+-----Công thức Feature Normalize-----
+-----Feature Scaling
+Standard Deviation là gì?
+Standard Deviation (độ lệch chuẩn) có thể hiểu là độ biến động của dữ liệu. Dữ liệu càng ổn định (ít chênh lệch), độ lệch chuẩn càng thấp. Kteam sẽ không đi sâu phần toán học của Standard Deviation, các bạn có thể tìm hiểu thêm tại Wikipedia.
+
+Trong numpy, ta có thể tính độ lệch chuẩn bằng hàm std():
+
+np.std(<mảng dữ liệu>,<index>,dtype = <kiểu dữ liệu>)
+
+Trong đó:
+Mảng dữ liệu là ma trận hoặc vector cần tìm độ lệch chuẩn, trong Feature Normalize chính là ma trận X input của chúng ta.
+Index: Nếu bằng 0 sẽ tính độ lệch chuẩn theo từng cột (trả về độ lệch chuẩn của từng cột), bằng 1 sẽ tính theo hàng.
+Kiểu dữ liệu: Kiểu dữ liệu càng phức tạp, độ chính xác càng cao, trong bài này Kteam sử dụng kiểu np.float64.
+
+Lưu ý: 
+Vì Standard Deviation là độ biến động của dữ liệu, nếu tất cả dữ liệu giống nhau, std = 0.
+
+-----Công thức Feature Scaling
+Để thực hiện Feature Scaling, ta chỉ cần lấy X chia cho độ lệch chuẩn:
+
+X_{scaled}= \frac{X}{s}  với  s = std(X)
+
+Tuy nhiên, ta sẽ không thực hiện Feature Normalize với bias feature (x0 = 1), vì thế sau khi Feature Normalize xong, ta sẽ gán giá trị x0 = 1 lại.
+Thực hiện std cho x0 sẽ trả về kết quả là 0, nếu tiếp tục lấy x/0 sẽ bị lỗi chia cho 0, nên ta phải cho x0 một độ biến động giả bằng cách gán x0 đầu tiên bằng 100 (để x0 không còn “luôn bằng 1”)
+Ta thực hiện Feature Scaling với numpy như sau:
+
+import numpy as np  
+def Normalize(X):
+    #tạo copy của X (tham chiếu X) để không ảnh hưởng trực tiếp đến X (tham trị).
+    n = np.copy(X)
+    #x0 đầu tiên giả = 100
+    n[0,0] = 100
+    #tính std cho từng feature x
+    s = np.std(n,0,dtype = np.float64)
+    n = n/s
+    #gán lại x0 = 1
+    n[:,0] = 1
+
+-----Mean Normalize
+Để thực hiện Mean Normalize, ta sẽ tính trung bình từng feature rồi lấy feature cũ trừ trung bình.
+
+Hàm tính trung bình – mean() với numpy:
+
+np.std(<mảng dữ liệu>,<index>)
+
+Trong đó:
+Mảng dữ liệu là ma trận hoặc vector cần tìm trung bình, trong Feature Normalize chính là ma trận X input của chúng ta.
+Index: Nếu bằng 0 sẽ tính trung bình theo từng cột (trả về trung bình của từng cột), bằng 1 sẽ tính theo hàng.
+Công thức Feature Normalize khi có Mean Normalize:
+
+X_{norm}=\frac{X-u}{s} với \mu = mean(X)
+
+Trong đó:
+\mu  đọc là mu
+
+Áp dụng vào hàm Normalize:
+
+import numpy as np  
+def Normalize(X):
+    #tạo copy của X (tham chiếu X) để không ảnh hưởng trực tiếp đến X (tham trị).
+    n = np.copy(X)
+    #x0 đầu tiên giả = 100
+    n[0,0] = 100
+    #tính std cho từng feature x
+    s = np.std(n,0,dtype = np.float64)
+    #tính mean cho từng feature x
+    mu = np.mean(n,0)
+    n = (n-mu)/s
+    #gán lại x0 = 1
+    n[:,0] = 1
+
+Trả kết quả
+Hàm normalize sẽ trả về 3 kết quả: norm, \mu và s. \mu và s được trả về để thuận tiện cho việc predict (trước khi predict phải Normalize input).
+
+import numpy as np  
+def Normalize(X):
+    #...
+    yield n
+    yield mu
+    yield s
+-----Áp dụng Feature Normalize vào multivariate problem
+Load data
+Bài 6 -  Resources
+
+Ta sẽ define một hàm riêng để load data, tiết kiệm thời gian hơn:
+
+import numpy as np  
+def Loadtxt(path):
+    try:
+        raw = np.loadtxt(path,delimiter = ‘,’)
+        X = np.zeros((np.size(raw,0),np.size(raw,1)))
+        X[:,0] = 1
+        X[:,1:] = raw[:,:-1]
+        y = raw[:,-1]
+        yield X
+        yield y
+    except:
+        return 0
+
+-----Normalize data
+
+import numpy as np  
+from functions import *
+[X, y] = Loadtxt(‘data.txt’)
+[X, mu, s] = Normalize(X)
+
+Train data
+Để train data, ta gọi hàm Gradient Descent đã viết sẵn với alpha = 0.1 và iter = 400
+
+import numpy as np  
+from functions import *
+[X, y] = Loadtxt(‘data.txt’)
+[X, mu, s] = Normalize(X)
+[Theta, J_hist] = GradientDescent(X,y,0.1,400)
+
+Predict kết quả
+Đầu tiên, ta phải normalize input với mu và s, sau đó mới dùng hàm predict
+
+import numpy as np  
+from functions import *
+[X, y] = Loadtxt(‘data.txt’)
+[X, mu, s] = Normalize(X)
+[Theta, J_hist] = GradientDescent(X,y,0.1,400)
+input = np.array([1,1650,3])
+input = (input-mu)/s
+#Lưu ý sửa lại x0 = 1
+input[0] = 1
+predict = predict(input,Theta)
+print(‘%.2f$’%(predict))
