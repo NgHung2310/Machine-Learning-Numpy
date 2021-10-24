@@ -1,0 +1,248 @@
+-----Gradient Descent là gì ?
+Qua các bài trước, chúng ta đã biết được cách dự đoán kết quả với parameter có sẵn, đánh giá được độ chính xác của bộ parameter đó. Gradient Descent chính là thuật toán được sử dụng để “tìm” ra bộ parameter trong những bài trước.
+
+Như trong bài HÀM J(θ) CHO LINEAR REGRESSION mà Kteam đã giới thiệu, nếu ta vẽ biểu đồ của hàm J(θ) của Linear Regression, ta sẽ được biểu đồ lõm:
+
+Gradient Descent, Python, Kteam, Howkteam
+
+Nhiệm vụ của thuật toán Gradient Descent là giảm J(θ) xuống nhỏ nhất, với biểu đồ trên thì cũng đồng nghĩa với việc tìm đường đến nơi thấp nhất trong biểu đồ.
+
+Cách thuật toán thực hiện là dùng giải tích để tính độ dốc (slope) của điểm hiện tại trên biểu đồ rồi di chuyển đến nơi thấp hơn từng bước một.
+
+Bộ parameter Theta tối ưu nhất sẽ nằm tại nơi có J(θ) thấp nhất. Gradient Descent sẽ dừng lại khi đến điểm thấp nhất.
+-----Công thức Gradient Descent
+Gradient Descent sử dụng phương pháp giải tích để tìm parameter Theta, công thức chung của Gradient Descent là:
+
+\theta := \theta - \alpha \frac{\partial }{\partial \theta}J(\theta)
+
+Nhìn chung, Gradient Descent sẽ điều chỉnh parameter Theta theo \alpha \frac{\partial }{\partial \theta}J(\theta) với:
+
+\alpha là độ lớn của các bước giảm.
+\frac{\partial }{\partial \theta}J(\theta) là đạo hàm của hàm J(θ), có tác dụng tính độ dốc của điểm hiện tại. Nếu độ dốc lớn sẽ thay đổi nhiều, đến khi slope = 0, điểm trũng, thấp nhất của hàm J(θ).
+Toàn bộ thuật toán sẽ là:
+
+Repeat until <reach minimum> {
+
+\theta:= \theta - \alpha \frac{\partial }{\partial \theta}J(\theta)
+
+}
+
+Qua mỗi vòng lặp Gradient Descent, J(θ) ngày càng chính xác hơn.
+-----Gradient Descent cho Linear Regression
+Kteam đã tính sẵn công thức Gradient Descent cho các bạn. Nếu bạn biết giải tích, bạn cũng có thể tự mình giải  \frac{\partial }{\partial \theta}J(\theta).
+
+Công thức:
+
+\theta:= \theta - \frac{\alpha}{m}\sum_{1}^{m}((h_{\theta}(X)-y)*X)
+
+Để tiện hơn cho việc lập trình, ta có thể rút gọn \sum_{1}^{m}((h_{\theta}(X)-y)*X) thành:
+
+\theta:= \theta - \frac{\alpha}{m}*(X^T * (X*\theta - y))
+
+Vì khi nhân ma trận, kết quả sẽ là tổng của các tích nên chúng ta không cần sử dụng tổng  \sum_{1}^{m} nữa.
+
+-----Lập trình Gradient Descent
+Trong bài này chúng ta chỉ làm việc với Univariate Problem vì ở Multivariate Problem ta sẽ cần làm thêm một bước là feature normalize, Kteam sẽ hướng dẫn trong bài sau.
+
+Import data
+Kteam đã cung cấp sẵn resource của bài viết này tại:
+
+Bài 5 - Resources
+
+Tương tự các bài trước, đầu tiên ta sẽ load raw data, sau đó tách riêng X và y.
+
+import numpy as np  
+import matplotlib.pyplot as plt #thư viện vẽ biểu đồ
+from functions import *
+#import toàn bộ file data.txt
+raw = np.loadtxt(‘data.txt’, delimiter = ',')
+#Tách lấy X
+X = np.copy(raw)
+X[:,1] = X[:,0]
+#thêm bias 1
+X[:,0] = 1
+#Tách lấy y
+y = raw[:,1]
+-----Gradient Descent
+Bây giờ chúng ta sẽ lập trình một hàm riêng để thực hiện :
+
+#file functions.py
+#define GradientDescent
+def GradientDescent(X,y,alpha=0.02,iter=5000): #giá trị mặc định của alpha là 0.02, iter (số vòng lặp tối đa) là 5000
+
+-----Variables
+Set các biến cần dùng:
+
+#Giá trị ban đầu của theta = 0
+theta = np.zeros(np.size(X,1)) #số lượng theta bằng số cột của X
+#array lưu lại các giá trị J trong quá trình lặp
+J_hist = np.zeros((iter,2)) # kích thước là iter*2, cột đầu chỉ là các số từ 1 đến iter để tiện cho việc plot. Kích thước được truyền vào qua một tupple
+#kích thước của training set
+m = np.size(y)
+#ma trận ngược (đảo hàng và cột) của X
+X_T = np.transpose(X)
+#biến tạm để kiểm tra tiến độ Gradient Descent
+pre_cost = computeCost(X,y,theta)
+-----Gradient Descent loop
+Bắt đầu vòng lặp của Gradient Descent:
+
+for i in range(0,iter):
+    #tính sai số (predict – y)
+    error = predict(X,theta) – y
+    #thực hiện gradient descent để thay đổi theta
+    theta = theta – (alpha/m)*(X_T @ error)
+Vậy là xong phần Gradient Descent cơ bản, nhưng để thuật toán tốt hơn, ta sẽ tự động dừng lại khi đạt đến điểm tối ưu. Cách nhận biết là khi qua một vòng lặp nhưng J(θ) không thay đổi nhiều (Kteam chọn mốc là <10-15).
+------Break check
+#tính J hiện tại
+cost = computeCost(X,y,theta)
+#so sánh với J của vòng lặp trước, so sánh 15 chữ số thập phân
+if np.round(cost,15) == np.round(pre_cost,15):
+    #in ra vòng lặp hiện tại và J để dễ debug
+    print(‘Reach optima at I = %d ; J = %.6f’%(i,cost))
+    #thoát vòng lặp
+    break
+#cập nhật pre_cost
+pre_cost = cost
+-----Save history
+Vậy là đã xong thuật toán Gradient Descent, nếu bạn muốn debug kĩ hơn nữa, bạn có thể ghi lại quá trình thay đổi của J(θ) trong vòng lặp:
+
+for i in range(0,iter): #vòng lặp gradient descent
+    #... các dòng lệnh ở trên …
+    #lưu lại index vòng lặp hiện tại
+    J_hist[i, 0] = i
+    #lưu lại J hiện tại
+    J_hist[i, 1] = cost
+#--bên trong câu điều kiện kiểm tra cost == pre_cost—
+#thêm tất cả các index còn lại sau khi break
+J_hist[i:,0] = range(i,iter)
+#giá trị J sau khi break sẽ như cũ
+J_hist[i:,1] = cost
+#break vòng lặp
+break
+-----Return
+Sau cùng, trả về kết quả
+
+yield theta
+yield J_hist
+-----Sử dụng Gradient Descent function
+Ở trên chúng ta đã load và chia data. Bây giờ sẽ là bước sử dụng Gradient Descent để train – tìm theta.
+
+#file main.py
+#Train data
+[Theta, J_hist] = GradientDescent(X,y)#mặc định alpha = 0.02 iter = 5000 
+Khi đã có được parameter Theta, ta có thể dự đoán như những bài trước.
+ 
+#Predict
+predict = predict(X,Theta) * 10000#chuyển về đơn vị người
+#Plot kết quả
+plt.figure(1)
+plt.plot(X[:,1],y,’rx’)
+plt.plot(X[:,1],predict/10000,’-b’) #đơn vị gốc: nghìn người
+plt.show()#nếu bạn muốn vẽ thêm biểu đồ J(θ), hàm show được gọi sau khi vẽ biểu đồ J(θ)
+
+-----Vẽ biểu đồ hàm J(θ)
+Để debug, bạn có thể vẽ hàm J(θ) như sau:
+
+plt.figure(2)
+plt.plot(J_hist[:,0],J_hist[:,1],’-r’)
+plt.show() #chỉ gọi 1 lần trong chương trình để hiển thị các biểu đồ cùng lúc
+-----Bonus: progress bar
+Khi train data, có thể bạn đặt iter quá lớn khiến cho việc chờ đợi dễ nản, vô vọng. Vì thế, bạn có thể define thêm một hàm để in progress bar để biết được tiến độ train:
+
+#file functions.py
+#Kteam đã lập trính sẵn hàm printProgressBar, bạn có thể tham khảo
+def printProgressBar (iteration, total, suffix = ''):
+    percent = ("{0:." + str(1) + "f}").format(100 * ((iteration+1) / float(total)))
+    filledLength = int(50 * iteration // total)
+    bar = '=' * filledLength + '-' * (50- filledLength)
+    print('\rTraining: |%s| %s%%' % (bar, percent), end = '\r')
+    # Print New Line on Complete
+    if iteration == total: 
+        print()
+        
+-----Sử dụng
+Để sử dụng, chỉ cần dùng hàm trong mỗi vòng lặp:
+
+#file functions.py
+#--vòng lặp gradient descent—
+printProgressBar(i,iter)
+-----Source code
+File functions.py
+#file functions.py
+#Kteam đã lập trính sẵn hàm printProgressBar, bạn có thể tham khảo
+def printProgressBar (iteration, total, suffix = ''):
+    percent = ("{0:." + str(1) + "f}").format(100 * ((iteration+1) / float(total)))
+    filledLength = int(50 * iteration // total)
+    bar = '=' * filledLength + '-' * (length - filledLength)
+    print('\rTraining: |%s| %s%%' % (bar, percent), end = '\r')
+    # Print New Line on Complete
+    if iteration == total: 
+        print()
+def GradientDescent(X,y,alpha=0.02,iter=5000): #giá trị mặc định của alpha là 0.02, iter (số vòng lặp tối đa) là 5000
+    #Giá trị ban đầu của theta = 0
+    theta = np.zeros(np.size(X,1)) #số lượng theta bằng số cột của X
+    #array lưu lại các giá trị J trong quá trình lặp
+    J_hist = np.zeros((iter,2)) # kích thước là iter*2, cột đầu chỉ là các số từ 1 đến iter để tiện cho việc plot. Kích thước được truyền vào qua một tupple
+    #kích thước của training set
+    m = np.size(y)
+    #ma trận ngược (đảo hàng và cột) của X
+    X_T = np.transpose(X)
+    #biến tạm để kiểm tra tiến độ Gradient Descent
+    pre_cost = computeCost(X,y,theta)
+    for i in range(0,iter):
+        printProgressBar(i,iter)
+        #tính sai số (predict – y)
+        error = predict(X,theta) – y
+        #thực hiện gradient descent để thay đổi theta
+        theta = theta – (alpha/m)*(X_T @ error)
+        #tính J hiện tại
+        cost = computeCost(X,y,theta)
+        #so sánh với J của vòng lặp trước, so sánh 15 chữ số thập phân
+        if np.round(cost,15) == np.round(pre_cost,15):
+            #in ra vòng lặp hiện tại và J để dễ debug
+            print(‘Reach optima at I = %d ; J = %.6f’%(i,cost))
+            #thêm tất cả các index còn lại sau khi break
+            J_hist[i:,0] = range(i,iter)
+            #giá trị J sau khi break sẽ như cũ
+            J_hist[i:,1] = cost
+            #thoát vòng lặp
+            break
+        #cập nhật pre_cost
+        pre_cost = cost
+        #lưu lại index vòng lặp hiện tại
+        J_hist[i, 0] = i
+        #lưu lại J hiện tại
+        J_hist[i, 1] = cost
+    yield theta
+    yield J_hist
+    
+File main.py
+#file main.py
+import numpy as np  
+import matplotlib.pyplot as plt #thư viện vẽ biểu đồ
+from functions import *
+#import toàn bộ file data.txt
+raw = np.loadtxt(data.txt, delimiter = ',')
+#Tách lấy X
+X = np.copy(raw)
+X[:,1] = X[:,0]
+#thêm bias 1
+X[:,0] = 1
+#Tách lấy y
+y = raw[:,1]
+#Train data
+[Theta, J_hist] = GradientDescent(X,y)#mặc định alpha = 0.02 iter = 5000
+#Predict
+predict = predict(X,Theta) * 10000#chuyển về đơn vị người
+#Plot kết quả
+plt.figure(1)
+plt.plot(X[:,1],y,’rx’)
+plt.plot(X[:,1],predict/10000,’-b’) #đơn vị gốc: nghìn người
+plt.figure(2)
+plt.plot(J_hist[:,0],J_hist[:,1],’-r’)
+plt.show() #chỉ gọi 1 lần trong chương trình để hiển thị các biểu đồ cùng lúc
+
+-----Lưu ý về Gradient Descent
+Gradient Descent chỉ có thể tìm đến chỗ trũng gần nhất. Nếu các loại hàm J(θ) có nhiều chỗ trũng thì có thể bạn sẽ không tìm được Theta tối ưu nhất.
+
+Gradient Descent cần có một \alpha phù hợp. Nếu quá bé sẽ khiến Gradient Descent rất chậm, nếu quá lớn Gradient Descent sẽ bước quá chỗ trũng dẫn đến không bao giờ tới được chỗ trũng.
